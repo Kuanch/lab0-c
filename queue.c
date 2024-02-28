@@ -154,7 +154,19 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    for (struct list_head *p = head->next, *next; p != head; p = next) {
+        element_t *e = list_entry(p, element_t, list);
+        next = p->next;
+        for (struct list_head *q = p->next, *next; q != head; q = next) {
+            element_t *e2 = list_entry(q, element_t, list);
+            next = q->next;
+            if (strcmp(e->value, e2->value) == 0) {
+                list_del(q);
+                free(e2->value);
+                free(e2);
+            }
+        }
+    }
     return true;
 }
 
@@ -163,17 +175,9 @@ void q_swap(struct list_head *head)
 {
     if (!head || list_empty(head))
         return;
-    for (struct list_head *p = head->next, *next, *prev; p != head;
-         p = p->next) {
-        prev = p->prev;
-        next = p->next;
-        prev->next = next;
-        next->prev = prev;
-        p->prev = next;
-        p->next = next->next;
-        next->next = p;
-        p->next->prev = p;
-    }
+    for (struct list_head *i = head->next; i != head && i->next != head;
+         i = i->next)
+        list_move_tail(i->next, i);
 }
 
 /* Reverse elements in queue */
@@ -196,13 +200,60 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k) {}
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    LIST_HEAD(new_head);
+    struct list_head *mid = q_find_mid(head);
+    list_cut_position(&new_head, head, mid->prev);
+
+    q_sort(head, descend);
+    q_sort(&new_head, descend);
+
+    struct list_head *temp;
+    struct list_head *node1 = head->next;
+    struct list_head *node2 = new_head.next;
+    for (; node1 != head && node2 != &new_head;) {
+        element_t *e1 = list_entry(node1, element_t, list);
+        element_t *e2 = list_entry(node2, element_t, list);
+        if (descend ? strcmp(e1->value, e2->value) > 0
+                    : strcmp(e1->value, e2->value) < 0) {
+            node1 = node1->next;
+        } else {
+            temp = node2->next;
+            list_del(node2);
+            node1->prev->next = node2;
+            node2->prev = node1->prev;
+            node1->prev = node2;
+            node2->next = node1;
+            node2 = temp;
+        }
+    }
+
+    if (node1 == head) {
+        list_splice_tail_init(&new_head, head);
+    }
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
+    for (struct list_head *p = head->next, *next; p != head; p = next) {
+        element_t *e = list_entry(p, element_t, list);
+        next = p->next;
+        for (struct list_head *q = p->next; q != head; q = q->next) {
+            element_t *e2 = list_entry(q, element_t, list);
+            if (strcmp(e->value, e2->value) > 0) {
+                list_del(p);
+                free(e->value);
+                free(e);
+                break;
+            }
+        }
+    }
     return 0;
 }
 
@@ -210,7 +261,19 @@ int q_ascend(struct list_head *head)
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
+    for (struct list_head *p = head->next, *next; p != head; p = next) {
+        element_t *e = list_entry(p, element_t, list);
+        next = p->next;
+        for (struct list_head *q = p->next; q != head; q = q->next) {
+            element_t *e2 = list_entry(q, element_t, list);
+            if (strcmp(e->value, e2->value) < 0) {
+                list_del(p);
+                free(e->value);
+                free(e);
+                break;
+            }
+        }
+    }
     return 0;
 }
 
