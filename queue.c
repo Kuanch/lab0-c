@@ -234,6 +234,7 @@ void q_reverseK(struct list_head *head, int k)
         struct list_head *tmp_node = tmp_head->next;  // 1
         tmp_head->next->next = next;                  // 1 -> 4
         tmp_head->next = next->prev;                  // head -> 3
+        next->prev->prev = tmp_head;                  // head <- 3
         next->prev = tmp_node;                        // 4 -> 1
         // let the tail of the reversed list be the new head
         tmp_head = tmp_node;
