@@ -121,6 +121,8 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
+    if (!head || list_empty(head))
+        return 0;
     int qlen = 0;
     for (struct list_head *p = head->next; p != head; p = p->next)
         qlen += 1;
@@ -154,17 +156,30 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    for (struct list_head *p = head->next, *next; p != head; p = next) {
+    if (!head || list_empty(head))
+        return false;
+
+    for (struct list_head *p = head->next, *p_next; p != head; p = p_next) {
+        bool found_dup = false;
+        p_next = p->next;
         element_t *e = list_entry(p, element_t, list);
-        next = p->next;
-        for (struct list_head *q = p->next, *next; q != head; q = next) {
+        for (struct list_head *q = p->next, *q_next, *q_prev; q != head;
+             q = q_next) {
             element_t *e2 = list_entry(q, element_t, list);
-            next = q->next;
+            q_next = q->next;
+            q_prev = q->prev;
             if (strcmp(e->value, e2->value) == 0) {
-                list_del(q);
-                free(e2->value);
-                free(e2);
+                q->next->prev = q_prev;
+                q_prev->next = q_next;
+                q_release_element(e2);
+                found_dup = true;
             }
+        }
+        if (found_dup) {
+            p_next = p->next;
+            p->prev->next = p_next;
+            p_next->prev = p->prev;
+            q_release_element(e);
         }
     }
     return true;
@@ -197,7 +212,34 @@ void q_reverse(struct list_head *head)
 }
 
 /* Reverse the nodes of the list k at a time */
-void q_reverseK(struct list_head *head, int k) {}
+void q_reverseK(struct list_head *head, int k)
+{
+    int q_remain = q_size(head);
+    if (!head || list_empty(head) || list_is_singular(head) || k < 2 ||
+        k > q_remain)
+        return;
+    struct list_head *tmp_head = head;
+    while (q_remain >= k) {
+        int count = 0;
+        struct list_head *next = NULL;
+        struct list_head *prev = NULL;
+        for (struct list_head *p = tmp_head->next; count < k && p != head;
+             p = next, count++) {
+            next = p->next;
+            prev = p->prev;
+            p->prev = next;
+            p->next = prev;
+        }
+        // connect between two reversed list
+        struct list_head *tmp_node = tmp_head->next;  // 1
+        tmp_head->next->next = next;                  // 1 -> 4
+        tmp_head->next = next->prev;                  // head -> 3
+        next->prev = tmp_node;                        // 4 -> 1
+        // let the tail of the reversed list be the new head
+        tmp_head = tmp_node;
+        q_remain -= k;
+    }
+}
 
 /* Sort elements of queue in ascending/descending order */
 void q_sort(struct list_head *head, bool descend)
@@ -215,7 +257,7 @@ void q_sort(struct list_head *head, bool descend)
     struct list_head *temp;
     struct list_head *node1 = head->next;
     struct list_head *node2 = new_head.next;
-    for (; node1 != head && node2 != &new_head;) {
+    while (node1 != head && node2 != &new_head) {
         element_t *e1 = list_entry(node1, element_t, list);
         element_t *e2 = list_entry(node2, element_t, list);
         if (descend ? strcmp(e1->value, e2->value) > 0
@@ -281,6 +323,18 @@ int q_descend(struct list_head *head)
  * order */
 int q_merge(struct list_head *head, bool descend)
 {
-    // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head)) {
+        return 0;
+    }
+    if (list_is_singular(head)) {
+        return list_entry(head->next, queue_contex_t, chain)->size;
+    }
+    queue_contex_t *merged_list = list_entry(head->next, queue_contex_t, chain);
+    for (struct list_head *p = head->next->next; p != head; p = p->next) {
+        queue_contex_t *node = list_entry(p, queue_contex_t, chain);
+        list_splice_init(node->q, merged_list->q);
+    }
+    q_sort(merged_list->q, descend);
+
+    return merged_list->size;
 }
