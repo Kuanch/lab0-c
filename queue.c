@@ -161,15 +161,21 @@ __attribute__((nonnull)) void list_sort(struct list_head *head)
      *   - Adding an element from the input as a size-1 sublist.
      */
     do {
+        // printf("count: %zu\n", count);
         size_t bits;
         struct list_head **tail = &pending;
 
         /* Find the least-significant clear bit in count */
-        for (bits = count; bits & 1; bits >>= 1)
+        for (bits = count; bits & 1; bits >>= 1) {
+            // printf("tail: %p, *tail: %p, %p, %p\n", tail, *tail,
+            // (*tail)->prev, &(*tail)->prev);
             tail = &(*tail)->prev;
+        }
+
         /* Do the indicated merge */
         if (bits) {
             struct list_head *a = *tail, *b = a->prev;
+            // printf("a: %p, b: %p\n", a, b);
 
             a = merge(b, a);
             /* Install the merged result in place of the inputs */
@@ -178,10 +184,13 @@ __attribute__((nonnull)) void list_sort(struct list_head *head)
         }
 
         /* Move one element from input list to pending */
+        // printf("list: %p, pending: %p\n", list, pending);
         list->prev = pending;
         pending = list;
         list = list->next;
         pending->next = NULL;
+        // printf("list: %p, pending: %p, pending->next: %p, pending->prev:
+        // %p\n", list, pending, pending->next, pending->prev);
         count++;
     } while (list);
 
@@ -501,4 +510,33 @@ int q_merge(struct list_head *head, bool descend)
     q_sort(merged_list->q, descend);
 
     return q_size(merged_list->q);
+}
+
+void swap2nodes(struct list_head *a, struct list_head *b)
+{
+    struct list_head *a_prev = a->prev;
+    struct list_head *b_prev = b->prev;
+    if (a->prev != b)
+        list_move(b, a_prev);
+    list_move(a, b_prev);
+}
+
+bool q_shuffle(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return false;
+
+    int qlen = q_size(head);
+    for (struct list_head *old = head->prev, *old_next, *new;
+         old != head &&qlen; old = old_next, qlen--) {
+        old_next = old->prev;
+        int rand_index = rand() % qlen;
+        new = head->next;
+        while (rand_index--)
+            new = new->next;
+        if (old == new)
+            continue;
+        swap2nodes(old, new);
+    }
+    return true;
 }
