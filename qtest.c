@@ -75,6 +75,8 @@ static int string_length = MAXSTRING;
 
 static int descend = 0;
 
+static int time_sort = 0;
+
 #define MIN_RANDSTR_LEN 5
 #define MAX_RANDSTR_LEN 10
 static const char charset[] = "abcdefghijklmnopqrstuvwxyz";
@@ -597,9 +599,18 @@ bool do_sort(int argc, char *argv[])
         report(3, "Warning: Calling sort on single node");
     error_check();
 
+    struct timespec start, end;
     set_noallocate_mode(true);
-    if (current && exception_setup(true))
+    if (current && exception_setup(true)) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
         q_sort(current->q, descend);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        if (time_sort) {
+            uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 +
+                                (end.tv_nsec - start.tv_nsec) / 1000;
+            report(4, "Time to sort: %ld microsecond", delta_us);
+        }
+    }
     exception_cancel();
     set_noallocate_mode(false);
 
@@ -619,6 +630,59 @@ bool do_sort(int argc, char *argv[])
 
             if (descend && strcmp(item->value, next_item->value) < 0) {
                 report(1, "ERROR: Not sorted in descending order");
+                ok = false;
+                break;
+            }
+        }
+    }
+
+    q_show(3);
+    return ok && !error_check();
+}
+
+bool do_lsort(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling sort on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling sort on single node");
+    error_check();
+
+    struct timespec start, end;
+    set_noallocate_mode(true);
+    if (current && exception_setup(true)) {
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        list_sort(current->q);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        if (time_sort) {
+            uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 +
+                                (end.tv_nsec - start.tv_nsec) / 1000;
+            report(4, "Time to sort: %ld microsecond", delta_us);
+        }
+    }
+    exception_cancel();
+    set_noallocate_mode(false);
+
+    bool ok = true;
+    if (current && current->size) {
+        for (struct list_head *cur_l = current->q->next;
+             cur_l != current->q && --cnt; cur_l = cur_l->next) {
+            /* Ensure each element in ascending/descending order */
+            element_t *item, *next_item;
+            item = list_entry(cur_l, element_t, list);
+            next_item = list_entry(cur_l->next, element_t, list);
+            if (strcmp(item->value, next_item->value) > 0) {
+                report(1, "ERROR: list sort failed to sort!");
                 ok = false;
                 break;
             }
@@ -1052,6 +1116,7 @@ static void console_init()
                 "");
     ADD_COMMAND(reverseK, "Reverse the nodes of the queue 'K' at a time",
                 "[K]");
+    ADD_COMMAND(lsort, "Sort the queue with list sort in Linux Kernel", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
@@ -1060,6 +1125,7 @@ static void console_init()
               "Number of times allow queue operations to return false", NULL);
     add_param("descend", &descend,
               "Sort and merge queue in ascending/descending order", NULL);
+    add_param("time_sort", &time_sort, "If report the time of sort", NULL);
 }
 
 /* Signal handlers */
