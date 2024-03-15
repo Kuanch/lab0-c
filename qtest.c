@@ -47,6 +47,7 @@ extern int show_entropy;
 #include "console.h"
 #include "report.h"
 
+#include "timsort.h"
 /* Settable parameters */
 
 #define HISTORY_LEN 20
@@ -599,17 +600,17 @@ bool do_sort(int argc, char *argv[])
         report(3, "Warning: Calling sort on single node");
     error_check();
 
-    struct timespec start, end;
+    // struct timespec start, end;
     set_noallocate_mode(true);
     if (current && exception_setup(true)) {
-        clock_gettime(CLOCK_MONOTONIC, &start);
+        // clock_gettime(CLOCK_MONOTONIC, &start);
         q_sort(current->q, descend);
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        if (time_sort) {
-            uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 +
-                                (end.tv_nsec - start.tv_nsec) / 1000;
-            report(4, "Time to sort: %ld microsecond", delta_us);
-        }
+        // clock_gettime(CLOCK_MONOTONIC, &end);
+        // if (time_sort) {
+        //     uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 +
+        //                         (end.tv_nsec - start.tv_nsec) / 1000;
+        //     report(4, "Time to sort: %ld microsecond", delta_us);
+        // }
     }
     exception_cancel();
     set_noallocate_mode(false);
@@ -692,6 +693,53 @@ bool do_lsort(int argc, char *argv[])
     q_show(3);
     return ok && !error_check();
 }
+
+bool do_timsort(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling sort on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling sort on single node");
+    error_check();
+
+    set_noallocate_mode(true);
+    if (current && exception_setup(true)) {
+        timsort(current->q);
+    }
+    exception_cancel();
+    set_noallocate_mode(false);
+
+    bool ok = true;
+    if (current && current->size) {
+        for (struct list_head *cur_l = current->q->next;
+             cur_l != current->q && --cnt; cur_l = cur_l->next) {
+            /* Ensure each element in ascending/descending order */
+            element_t *item, *next_item;
+            item = list_entry(cur_l, element_t, list);
+            next_item = list_entry(cur_l->next, element_t, list);
+            if (strcmp(item->value, next_item->value) > 0) {
+                report(1, "ERROR: timsort failed to sort!");
+                ok = false;
+                break;
+            }
+        }
+    }
+
+    q_show(3);
+    return ok && !error_check();
+
+}
+
 
 static bool do_dm(int argc, char *argv[])
 {
@@ -1143,6 +1191,7 @@ static void console_init()
                 "[K]");
     ADD_COMMAND(lsort, "Sort the queue with list sort in Linux Kernel", "");
     ADD_COMMAND(shuffle, "Shuffle the queue", "");
+    ADD_COMMAND(timsort, "Sort the queue with tim sort", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",

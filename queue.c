@@ -161,21 +161,15 @@ __attribute__((nonnull)) void list_sort(struct list_head *head)
      *   - Adding an element from the input as a size-1 sublist.
      */
     do {
-        // printf("count: %zu\n", count);
         size_t bits;
         struct list_head **tail = &pending;
 
         /* Find the least-significant clear bit in count */
-        for (bits = count; bits & 1; bits >>= 1) {
-            // printf("tail: %p, *tail: %p, %p, %p\n", tail, *tail,
-            // (*tail)->prev, &(*tail)->prev);
+        for (bits = count; bits & 1; bits >>= 1)
             tail = &(*tail)->prev;
-        }
-
         /* Do the indicated merge */
         if (bits) {
             struct list_head *a = *tail, *b = a->prev;
-            // printf("a: %p, b: %p\n", a, b);
 
             a = merge(b, a);
             /* Install the merged result in place of the inputs */
@@ -184,13 +178,10 @@ __attribute__((nonnull)) void list_sort(struct list_head *head)
         }
 
         /* Move one element from input list to pending */
-        // printf("list: %p, pending: %p\n", list, pending);
         list->prev = pending;
         pending = list;
         list = list->next;
         pending->next = NULL;
-        // printf("list: %p, pending: %p, pending->next: %p, pending->prev:
-        // %p\n", list, pending, pending->next, pending->prev);
         count++;
     } while (list);
 
