@@ -54,7 +54,11 @@ test_queue: test_queue.o $(OBJS_WITHOUT_QTEST)
 	$(VECHO) "  LD\t$@\n"
 	$(Q)$(CC) $(LDFLAGS) -o $@ $^ -lm
 
-perf_sort: perf_sort.o $(OBJS_WITHOUT_QTEST)
+sort_perf: sort_perf.o $(OBJS_WITHOUT_QTEST)
+	$(VECHO) "  LD\t$@\n"
+	$(Q)$(CC) $(LDFLAGS) -o $@ $^ -lm
+
+sort_dist: sort_dist.o $(OBJS_WITHOUT_QTEST)
 	$(VECHO) "  LD\t$@\n"
 	$(Q)$(CC) $(LDFLAGS) -o $@ $^ -lm
 
