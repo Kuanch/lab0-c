@@ -12,7 +12,7 @@ extern "C" {
  * Reference: https://gcc.gnu.org/onlinedocs/gcc/Typeof.html
  */
 #if defined(__GNUC__) || defined(__clang__)
-#define __LIST_HAVE_TYPEOF 1
+#define __LIST_HAVE_TYPEOF 0
 #endif
 
 /**
