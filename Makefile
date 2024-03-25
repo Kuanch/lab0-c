@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O1 -g -Wall -Werror -Idudect -I.
+CFLAGS = -O0 -g -Wall -Werror -Idudect -I.
 LDFLAGS :=
 TRAIN = train
 RL = rl
@@ -52,9 +52,9 @@ OBJS := qtest.o timsort.o report.o console.o harness.o queue.o \
 		agents/mcts.o agents/reinforcement_learning.o agents/negamax.o \
 		game.o mt19937-64.o zobrist.o ttt.o
 
-ifeq ("$(MCTS)", "")
+ifeq ("$(MCTS)", "1")
 	CFLAGS := $(MCTS_CFLAGS) -D USE_MCTS
-else ifeq ("$(RL)", "")
+else ifeq ("$(RL)", "1")
 	CFLAGS := $(RL_CFLAGS) -D USE_RL
 endif
 
