@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +73,52 @@ double calculate_win_value(char win, char player)
     return 0.5;
 }
 
+unsigned int calculate_win_value_uint(char win, char player)
+{
+    if (win == player)
+        return 1 << FIXED_POINT_SCALE;
+    if (win == (player ^ 'O' ^ 'X'))
+        return 0;
+    return 1 << (FIXED_POINT_SCALE - 1);
+}
+
+inline unsigned int double_to_fixed_point(double value)
+{
+    return (unsigned int) (value * (1 << FIXED_POINT_SCALE));
+}
+
+inline double fixed_point_to_double(unsigned int value)
+{
+    return (double) value / (1 << FIXED_POINT_SCALE);
+}
+
+inline unsigned int fixed_point_divide(unsigned int a, unsigned int b)
+{
+    return (a << FIXED_POINT_SCALE) / b;
+}
+
+unsigned int fixed_point_sqrt(unsigned int x)
+{
+    unsigned int r = x > 1 ? (x >> 1) : 1;
+    unsigned int r_new;
+    while (1) {
+        if (r == 0)
+            return r;
+        unsigned int div = fixed_point_divide(x, r);
+        r_new = (r + div) >> 1;
+        unsigned int diff = r_new - r;
+        if (diff < TOLERANCE) {
+            return r_new;
+        }
+        r = r_new;
+    }
+}
+
+inline unsigned int fixed_point_log(unsigned int x)
+{
+    return double_to_fixed_point(log(fixed_point_to_double(x)));
+}
+
 int *available_moves(char *table)
 {
     int *moves = malloc(N_GRIDS * sizeof(int));
@@ -80,6 +128,7 @@ int *available_moves(char *table)
             moves[m++] = i;
     if (m < N_GRIDS)
         moves[m] = -1;
+    // moves = [0, 1, 2, 3, 5, 6, 8, ... -1, null, null, ...]
     return moves;
 }
 
