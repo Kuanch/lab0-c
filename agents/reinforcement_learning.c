@@ -85,10 +85,11 @@ int get_action_exploit(char *table, rl_agent_t *agent)
     return max_act;
 }
 
-int play_rl(char *table, rl_agent_t *agent)
+int play_rl(char *table, char *agent)
 {
-    int move = get_action_exploit(table, agent);
-    table[move] = agent->player;
+    rl_agent_t *rl_agent = (rl_agent_t *) agent;
+    int move = get_action_exploit(table, rl_agent);
+    table[move] = rl_agent->player;
     return move;
 }
 

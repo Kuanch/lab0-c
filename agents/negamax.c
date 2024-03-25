@@ -88,8 +88,9 @@ void negamax_init()
     hash_value = 0;
 }
 
-move_t negamax_predict(char *table, char player)
+int negamax_predict(char *table, char *player_ptr)
 {
+    char player = *player_ptr;
     memset(history_score_sum, 0, sizeof(history_score_sum));
     memset(history_count, 0, sizeof(history_count));
     move_t result;
@@ -97,5 +98,5 @@ move_t negamax_predict(char *table, char player)
         result = negamax(table, depth, player, -100000, 100000);
         zobrist_clear();
     }
-    return result;
+    return result.move;
 }

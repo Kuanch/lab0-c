@@ -20,6 +20,6 @@ void load_model(rl_agent_t *agent,
                 unsigned int state_num,
                 const char *model_path);
 int get_action_exploit(char *table, rl_agent_t *agent);
-int play_rl(char *table, rl_agent_t *agent);
+int play_rl(char *table, char *agent);
 void store_state_value(rl_agent_t *agent, unsigned int N_STATES);
 void init_rl_agent(rl_agent_t *agent, unsigned int state_num, char player);

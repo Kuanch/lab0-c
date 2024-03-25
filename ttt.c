@@ -3,6 +3,7 @@
 #endif
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,7 +99,7 @@ static int get_input(char player)
     return GET_INDEX(y, x);
 }
 
-int ttt()
+int ttt(int ai_vs_ai)
 {
     srand(time(NULL));
     char table[N_GRIDS];
@@ -106,16 +107,21 @@ int ttt()
     char turn = 'X';
     char ai = 'O';
 
+    int (*ai_algorithm)(char *, char *) = NULL;
+
 #ifdef USE_RL
     rl_agent_t agent;
     unsigned int state_num = 1;
     CALC_STATE_NUM(state_num);
     init_rl_agent(&agent, state_num, 'O');
     load_model(&agent, state_num, MODEL_NAME);
+    ai_algorithm = play_rl;
 #elif defined(USE_MCTS)
     // A routine for initializing MCTS is not required.
+    ai_algorithm = mcts;
 #else
     negamax_init();
+    ai_algorithm = negamax_predict;
 #endif
     while (1) {
         char win = check_win(table);
@@ -131,16 +137,16 @@ int ttt()
 
         if (turn == ai) {
 #ifdef USE_RL
-            int move = play_rl(table, &agent);
+            int move = ai_algorithm(table, &agent);
             record_move(move);
 #elif defined(USE_MCTS)
-            int move = mcts(table, ai);
+            int move = ai_algorithm(table, &ai);
             if (move != -1) {
                 table[move] = ai;
                 record_move(move);
             }
 #else
-            int move = negamax_predict(table, ai).move;
+            int move = ai_algorithm(table, &ai);
             if (move != -1) {
                 table[move] = ai;
                 record_move(move);
@@ -150,10 +156,16 @@ int ttt()
             draw_board(table);
             int move;
             while (1) {
-                move = get_input(turn);
-                if (table[move] == ' ') {
+                if (ai_vs_ai)
+#ifdef USE_RL
+                    move = ai_algorithm(table, &agent);
+#else
+                    move = ai_algorithm(table, &turn);
+#endif
+                else
+                    move = get_input(turn);
+                if (table[move] == ' ')
                     break;
-                }
                 printf("Invalid operation: the position has been marked\n");
             }
             table[move] = turn;
@@ -162,6 +174,8 @@ int ttt()
         turn = turn == 'X' ? 'O' : 'X';
     }
     print_moves();
+    // when code arrive here, it means the game is over, reset move_count
+    move_count = 0;
 
     return 0;
 }

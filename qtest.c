@@ -48,6 +48,8 @@ extern int show_entropy;
 #include "report.h"
 
 #include "timsort.h"
+
+#include "ttt.h"
 /* Settable parameters */
 
 #define HISTORY_LEN 20
@@ -77,6 +79,8 @@ static int string_length = MAXSTRING;
 static int descend = 0;
 
 static int time_sort = 0;
+
+static int ai_vs_ai = 0;
 
 #define MIN_RANDSTR_LEN 5
 #define MAX_RANDSTR_LEN 10
@@ -737,7 +741,31 @@ bool do_timsort(int argc, char *argv[])
 
     q_show(3);
     return ok && !error_check();
+}
 
+static bool do_ttt(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int ok = true;
+    if (exception_setup(true)) {
+        alarm(0);
+#ifdef USE_RL
+        printf("Using reinforcement learning\n");
+#elif defined(USE_MCTS)
+        printf("Using Monte Carlo Tree Search\n");
+#else
+        printf("Using negamax\n");
+#endif
+        ok = ttt(ai_vs_ai);
+        alarm(1);
+    }
+    exception_cancel();
+
+    return (bool) ok && !error_check();
 }
 
 
@@ -1192,6 +1220,7 @@ static void console_init()
     ADD_COMMAND(lsort, "Sort the queue with list sort in Linux Kernel", "");
     ADD_COMMAND(shuffle, "Shuffle the queue", "");
     ADD_COMMAND(timsort, "Sort the queue with tim sort", "");
+    ADD_COMMAND(ttt, "Start a tic-tac-toe game", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
@@ -1201,6 +1230,7 @@ static void console_init()
     add_param("descend", &descend,
               "Sort and merge queue in ascending/descending order", NULL);
     add_param("time_sort", &time_sort, "If report the time of sort", NULL);
+    add_param("ai_vs_ai", &ai_vs_ai, "If AI plays against AI", NULL);
 }
 
 /* Signal handlers */

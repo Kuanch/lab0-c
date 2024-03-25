@@ -128,8 +128,9 @@ static void expand(struct node *node, char *table)
     free(moves);
 }
 
-int mcts(char *table, char player)
+int mcts(char *table, char *player_ptr)
 {
+    char player = *player_ptr;
     char win;
     struct node *root = new_node(-1, player, NULL);
     for (int i = 0; i < ITERATIONS; i++) {
