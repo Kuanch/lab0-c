@@ -1,6 +1,15 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef likely
+#define likely(x) __builtin_expect(!!(x), 1)
+#endif
+
+#ifndef unlikely
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
 
 #include "queue.h"
 
@@ -84,7 +93,7 @@ __attribute__((nonnull)) void merge_final(struct list_head *head,
                                           struct list_head *b)
 {
     struct list_head *tail = head;
-    // u8 count = 0;
+    uint8_t count = 0;
 
     for (;;) {
         /* if equal, take 'a' -- important for sort stability */
@@ -118,9 +127,10 @@ __attribute__((nonnull)) void merge_final(struct list_head *head,
          * element comparison is needed, so the client's cmp()
          * routine can invoke cond_resched() periodically.
          */
-        // if (!++count)
-        //    strcmp(list_entry(b, element_t, list)->value,
-        //           list_entry(b, element_t, list)->value);
+        if (unlikely(!++count))
+            // cppcheck-suppress ignoredReturnValue
+            strcmp(list_entry(b, element_t, list)->value,
+                   list_entry(b, element_t, list)->value);
         b->prev = tail;
         tail = b;
         b = b->next;
@@ -168,7 +178,7 @@ __attribute__((nonnull)) void list_sort(struct list_head *head)
         for (bits = count; bits & 1; bits >>= 1)
             tail = &(*tail)->prev;
         /* Do the indicated merge */
-        if (bits) {
+        if (likely(bits)) {
             struct list_head *a = *tail, *b = a->prev;
 
             a = merge(b, a);
